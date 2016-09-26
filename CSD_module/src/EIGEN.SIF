@@ -1,0 +1,96 @@
+!-----------------------------------------------------
+! Author: Rimple Sandhu, Carleton University
+! Email: rimple_sandhu@outlook.com
+!-----------------------------------------------------
+
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "output/mesh" 
+  Results Directory "output"
+End
+
+Simulation
+  Max Output Level = 20
+  Coordinate System = "Cartesian 3D" !changeable
+  Coordinate Mapping(3) = 1 2 3
+  Simulation Type = Steady state
+  Steady State Max Iterations = 1
+  Solver Input File = "EIGEN.sif"
+  Post File = "../eigen/case.ep"
+  Output File = "../eigen/deflection.dat" 
+End
+
+Body 1
+  Target Bodies = 1
+  Equation = 1
+  Material = 1
+End
+
+Solver 1
+  Equation =SmitcSolver
+  Eigen System Values = 10
+  Procedure = "StressSolve" "StressSolver" ! changeable
+  Variable = Deflection
+  Variable DOFs = integer 3
+  Eigen System Select = Smallest magnitude
+  Eigen Analysis = True
+  Exec Solver = Always
+  Linear System Solver = direct ! iterative
+  Steady State Convergence Tolerance = 1.0e-4
+  Linear System Iterative Method = BiCGStab
+  Linear System Max Iterations = 500
+  Linear System Convergence Tolerance = 1.0e-7
+  Linear System Abort Not Converged = False
+  Linear System Residual Output = 1
+  Linear System Precondition Recompute = 1
+End
+
+Equation 1
+  Name = "Plate Equation"
+  Active Solvers(3) = 1 2 3
+End
+
+Solver 2
+  Exec Solver = String "after timestep"
+  exec interval = 1
+  Equation = String "ResultOutput"
+  Procedure = File "ResultOutputSolve" "ResultOutputSolver"
+  Output File Name = File "../eigen/eigen."
+  Vtu Format = Logical True
+  Scalar Field 1 = Deflection 1
+  Scalar Field 2 = Deflection 2
+  Scalar Field 3 = Deflection 3
+End
+
+Solver 3
+  Procedure = File "SaveData" "SaveScalars"
+  Filename = Frequency.txt
+  Output Directory = "./output/eigen"
+  Save Eigenfrequencies = Logical True
+End
+
+Material 1
+  Density = Real 700.0
+  Rotate Elasticity Tensor = Logical True
+  Material Coordinates Unit Vector 1(3) = 0.7071 0.7071 0.0
+  Material Coordinates Unit Vector 2(3) = -0.7071 0.7071 0.0
+  Material Coordinates Unit Vector 3(3) = 0.0 0.0 1.0
+  Youngs modulus
+  size 6 6
+  Real  9.0e9   2.8e9    0      0    0    0
+        2.8e9   9.0e9    0      0    0    0
+        0       0     1e16      0    0    0
+        0       0        0  3.1e9    0    0
+        0       0        0      0  9e6    0
+        0       0        0      0    0  8e6
+End
+
+Boundary Condition 1
+  Target Boundaries(1) = 1
+  Name = "Fixed"
+  Deflection 1 = 0.0
+  Deflection 3 = 0.0
+  Deflection 2 = 0.0
+End
+
+

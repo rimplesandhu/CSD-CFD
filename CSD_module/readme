@@ -1,0 +1,142 @@
+C     -----------------------------------------------------
+C     Author: Rimple Sandhu, Carleton University
+C     Email: rimple_sandhu@outlook.com
+C     -----------------------------------------------------
+
+
+-- If you changed geometry parameters, do this:
+1. Run 'make mesh2' and 'make to_elmer' from CSD_module directory
+2. make sure the flags IFLAG_SPLINE and IFLAG_SPLINEB is set to 1 the first time you run the code
+3. change PAR_S parameter to changed thickneess of the beam in subroutine EXTRACT_NS of the CSD_module.F source file.
+4. run 'make transient_zero' to get new zero.str file    
+
+- If you want to assign initial deformation from static simulation result of elmer, do this:
+1. run 'make static' from csd_module folder. Make sure the material properties are same in STATIC.SIF file as in Transient or eigen sif files
+2. Copy zero.str to initial_static.str in restart folder and add deflections manuallu from static result to initial_static file.
+3. Add the following line in the sample.f code after you run INITIAL_X subroutine
+STATUS = SYSTEM('cd CSD_module/output/restart; cp initial_static.str restart.str')
+
+
+
+- CSD_module/: This directory contains all the source codes. This directory has nothing to do with CFD and you will never need to see whats inside it.
+- CSD_module.f90: This is module file that provides an user-friendly interface to the ugly codes in the above directory. There are following two subroutines based on what you requested:
+This module file and the folder has to be in the same directory!!
+
+- Sample.f90 : this is a sample code that tests these routines. You can take a look at this code to understand how you need to execute these subroutines in your fortran code.
+
+- data_for_testing/ : this is just for testing. This contains the data that you sent me for the undeformed grid points and the pressure coefficients. We can delete this once the coupling is done.
+
+For the time being you can compile the code as following:
+
+$$ gfortran CSD_module.f90 sample.f90
+$$ ./a.out
+
+
+C     -----------------------------------------------------
+C     DESC: Preprocessing for CFD2CSD: Part A
+      SUBROUTINE PREPROC_A(NA, tX0_A, NS, NST, U, STATUS)
+C     -----------------------------------------------------
+C     IN--NA: No. of nodes on the CFD boundary
+C     IN--tX0_A(NA,3): Undeformed CFD boundary node co-ordinates
+C     OUT--NS: No. of nodes on the CSD boundary
+C     OUT--NST: No. of total nodes in CSD mesh
+C     IN--U: Free-stream velocity
+C     OUT--STATUS: 1 = ran successfuly, otherwise 0
+C     -----------------------------------------------------
+
+
+C     -----------------------------------------------------
+C     DESC: Extract boundary nodes for CSD
+      SUBROUTINE EXTRACT_NS(NS, NST)
+C     -----------------------------------------------------
+C     OUT--NS: No. of nodes on the CSD boundary
+C     OUT--NST: No. of total nodes in CSD mesh
+C     -----------------------------------------------------
+
+
+C     -----------------------------------------------------
+C     DESC: Preprocessing for CFD2CSD: Part B
+      SUBROUTINE PREPROC_B(NA, NS, tX0_S, 
+     +                    IFLAG_SPLINE, IFLAG_EIGEN, STATUS)
+C     -----------------------------------------------------
+C     IN--NA: N0. of nodes on the CFD boundary
+C     IN--NS: N0. of nodes on the CSD boundary
+C     OUT--tX0_S(NS,3): undeformed CSD boundary node co-ordinates
+C     IN--IFLAG_SPLINE: 1 = calculate new spline matrix
+C     IN--IFLAG_EIGEN: 1 = perform eigen value analysis
+C     OUT--STATUS: 1 = ran successfuly, 0 otherwise
+C     -----------------------------------------------------
+
+
+C     -----------------------------------------------------
+C     DESC: Generate initial deflection in CSD format
+      SUBROUTINE INITIAl_X(NA, tXT_A, NS, NST, 
+     +                     IFLAG_SPLINEB, STATUS)
+C     -----------------------------------------------------
+C     IN--NA: No. of nodes on the CFD boundary
+C     IN--tXT_A(NA,3): deformed CFD boundary grid  
+C     IN--NS: No. of nodes on the CSD boundary
+C     IN--NST: No. of total nodes on the CSD mesh
+C     IN--IFLAG_SPLINEB: 1=when CSD grid changed, 0 otherwise
+C     OUT--STATUS: 1 = ran successfuly, 0 otherwise
+C     -----------------------------------------------------
+
+
+C     -----------------------------------------------------
+C     DESC: Transient simulation
+      SUBROUTINE CSD2CFD(NS, tX0_S, tXT_S, NA, tX0_A, tXT_A,
+     +                   F_A, NST, DT, T, IFLAG_IMPLICIT, STATUS)
+C     -----------------------------------------------------
+C     IN--NS: No. of nodes on the CSD boundary
+C     IN--tX0_S(NS,3): undeformed CSD boundary nodes 
+C     OUT--tXT_S(NS,3): deformed CSD boundary nodes
+C     IN--NA: No. of nodes on the aerodynamic boundary
+C     IN--tX0_A(NS,3): undeformed CFD boundary nodes 
+C     OUT--tXT_A(NS,3): deformed CFD boundary nodes
+C     IN--F_A: Nodal Force on CFD boundary grid
+C     IN--NST: No. of total nodes on the CSD mesh
+C     IN--DT: Time integration step
+C     IN--T: current time IN SIMULATION
+C     IN--IFLAG_IMPLICIT = 1: Don't rewrite the start.str
+C     IN--IFLAG_IMPLICIT = 0; Re-write the start.str
+C     OUT--STATUS: 1 = ran successfully, 0 otherwise.
+C     -----------------------------------------------------
+
+
+C     -----------------------------------------------------
+C     DESC: Calculation of spline matrix
+      SUBROUTINE RBF_HMAT(N1, N2, X1, X2, R, H, STATUS)
+C     -----------------------------------------------------
+C     IN--N1: length of variable X1
+C     IN--N2: length of variable X2
+C     IN--X1(N1,3): Co-ordinates for variable 1
+C     IN--X2(N2,3): Co-ordinates for variable 2
+C     IN--R: Radius for rbf
+C     OUT--H: New spline matrix
+C     OUT--STATUS: 1= ran succesfully, else 0
+C     -----------------------------------------------------
+
+C     -----------------------------------------------------
+C     DESC: Radial Basis Function
+      SUBROUTINE RBF_BECKERT_WENDLAND(N, X, R, RES)
+C     -----------------------------------------------------
+C     IN--N: length of vector X
+C     IN--X: vector whose rbf value needs to be calculated
+C     IN--R: radius of radial basis function
+C     OUT--RES: the rbf value at given X
+C     -----------------------------------------------------
+
+
+
+
+
+Some important notes:
+1. I had to do the transformation of the co-ordinate system because my rectangular cross-section wing was in a different system that the agars wing. The transformation matrix and its inverse came out to be [1, 0, 0; 0, 0, 1;0, 1, 0].
+2. the pressure is assumed to be acting vertically downwards (-y in your case and -z in my case). Again the direction is taken care of.
+3. Computational time will be issue but it should be ok for now for getting the coupling code ready. Since I am taking inverse of 7986 * 651 matrix for the RBF based interpolation, it might take some time. The large number of boundary nodes on the structure is due to small thickness of the wing. Small thickness is necessary for eigenvalue validation. We can deal with this issue later.
+4 You have to source to ElmerSolver, and elmerf90 so that you can access it from anywhere. CSD_module.f90 makes call to these.
+5. The code pertains to Weakened model 3 in the Agard report. The eigen values  and eigen shapes can be found in CSD_module/output/eigen/. The eigen values that I got are (10.5, 34.1, 48.6, 92.2). The ones in the agars report are (9.60,38.10,50.7,98.50).
+
+
+** only for rimple***
+caveat: writing of static.str needs to be changed if there are inner nodes, error expected

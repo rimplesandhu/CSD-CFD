@@ -1,0 +1,139 @@
+$dt =   3.255479678046E-04
+$T =   6.510959356092E-04
+
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "output/mesh"
+  Results Directory "output"
+End
+
+Simulation
+  Max Output Level = 20
+  Coordinate System = "Cartesian 3D"
+  Coordinate Mapping(3) = 1 2 3
+  Simulation Type = Transient
+  Steady State Max Iterations = 1
+  Solver Input File = "TRANSIENT_ZERO.SIF"
+  !Restart File = "../restart/start.str"
+  Output File = "../restart/zero.str" 
+  !Restart Position = 0
+  !Restart Time = Real $T
+  Output Intervals = 0
+  Timestepping Method = BDF
+  BDF Order = 1
+  Timestep intervals = 1
+  Timestep Sizes = Real $dt
+End
+
+Solver 1
+  Equation = SmitcSolver
+  Procedure = "StressSolve" "StressSolver" ! changeable
+  Variable = -dofs 3 deflection
+  Exec Solver = Always
+  Calculate Velocity = Logical True
+  Stabilize = True
+  Bubbles = False
+  Lumped Mass Matrix = False
+  Optimize Bandwidth = True
+  Linear System Solver = direct ! iterative
+  Steady State Convergence Tolerance = 1.0e-4
+  Linear System Iterative Method = BiCGStab
+  Linear System Max Iterations = 500
+  Linear System Convergence Tolerance = 1.0e-7
+  Linear System Abort Not Converged = False
+  Linear System Residual Output = 1
+  Linear System Precondition Recompute = 1
+  Time Derivative Order = 2
+End
+
+Solver 2
+  Exec Solver = String "after timestep"
+  exec interval = 1
+  Equation = String "ResultOutput"
+  Procedure = File "ResultOutputSolve" "ResultOutputSolver"
+  Output File Name = File "../transient/transient.St."
+  !Vtk Format = Logical True
+  Vtu Format = Logical True
+  Show Variables = Logical True
+  !Gmsh Format = Logical True
+  Ascii Output = Logical True
+  Save Boundaries Only = Logical True
+  Scalar Field 1 = Deflection 1
+  Scalar Field 2 = Deflection 2
+  Scalar Field 3 = Deflection 3
+End
+
+Solver 3
+  Exec Solver = String "after timestep"
+  exec interval = 1
+  Equation = SaveLine
+  Procedure = "SaveData" "SaveLine"
+  Filename = "transient/defSTraw.dat"
+  File Append  = Logical False
+  Variable 1 =  Coordinate 1
+  Variable 2 =  Coordinate 2
+  Variable 3 =  Coordinate 3
+End
+
+Equation 1
+  Name = "Beam equation"
+  Stress Analysis = Logical true
+  Active Solvers(3) = 1 2 3
+End
+
+Body 1
+  Target Bodies(1) = 1
+  Name = "Wing"
+  Equation = 1
+  Material = 1
+  Body Force = 1
+End
+
+Material 1
+  Density = Real 700.0
+  Rotate Elasticity Tensor = Logical True
+  Material Coordinates Unit Vector 1(3) = 0.7071 0.7071 0.0
+  Material Coordinates Unit Vector 2(3) = -0.7071 0.7071 0.0
+  Material Coordinates Unit Vector 3(3) = 0.0 0.0 1.0
+  Youngs modulus
+  size 6 6
+  Real  9.0e9   2.8e9    0      0    0    0
+        2.8e9   9.0e9    0      0    0    0
+        0       0     1e16      0    0    0
+        0       0        0  3.1e9    0    0
+        0       0        0      0  9e6    0
+        0       0        0      0    0  8e6
+  Rayleigh damping = Logical True
+  Rayleigh alpha = Real 0.0
+  Rayleigh beta = Real 0.0
+End
+
+Boundary Condition 1
+  Target Boundaries(1) = 1
+  Name = "Fixed"
+  Deflection 1 = 0.0
+  Deflection 3 = 0.0
+  Deflection 2 = 0.0
+  Save Line = Logical True
+End
+
+Body Force 1
+  Name = 'Nodal forces'
+  Deflection 1 load = Real 0.0
+  Deflection 2 load = Real 0.0
+  Deflection 3 load = Real 0.0
+  !Real Procedure "output/transient/AERO_PRESSURE" "getFORCE" 
+End 
+
+Boundary Condition 2
+  Target Boundaries(5) = 2 3 4 5 6
+  Name = "save data"
+  Save Line = Logical True
+End
+
+
+
+
+
+
+

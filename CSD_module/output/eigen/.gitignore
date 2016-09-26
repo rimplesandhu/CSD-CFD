@@ -1,0 +1,7 @@
+# Ignore everything in this directory
+*
+# except this file
+!.gitignore
+# this file was created by Rimple Sandhu
+# Just to make sure empty directory is added to the git repository
+# Thanks
